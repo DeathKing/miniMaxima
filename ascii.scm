@@ -113,7 +113,7 @@
                   (sub2/draw-y (+ y (quotient (- height sub2/h) 2))))
               (matrix/draw "+" target (+ 1 x sub1/w) (+ y half-height))
               ((component-drawable sub1) target x              sub1/draw-y)
-              ((component-drawable sub2) target (+ 3 x sub1/w) sub1/draw-y))))))
+              ((component-drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
  
 
 (define (make-sub s)
@@ -131,7 +131,7 @@
                   (sub2/draw-y (+ y (quotient (- height sub2/h) 2))))
               (matrix/draw "-" target (+ 1 x sub1/w) (+ y half-height))
               ((component-drawable sub1) target x              sub1/draw-y)
-              ((component-drawable sub2) target (+ 3 x sub1/w) sub1/draw-y))))))
+              ((component-drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
  
 
 (define (make-mul s)
@@ -149,7 +149,7 @@
                   (sub2/draw-y (+ y (quotient (- height sub2/h) 2))))
               (matrix/draw "*" target (+ 1 x sub1/w) (+ y half-height))
               ((component-drawable sub1) target x              sub1/draw-y)
-              ((component-drawable sub2) target (+ 3 x sub1/w) sub1/draw-y))))))
+              ((component-drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
  
 
 (define (make-div s)
@@ -207,6 +207,18 @@
 
 (newline)
 
-(define c (make-component (p b)))
+(define pi '(+ 1
+               (/ 1
+                  (+ 3
+                     (/ 4
+                        (+ 5
+                           (/ 9
+                              (+ 7
+                                 (/ 16
+                                    (+ 9 a))))))))))
+(define sp '(/ 1
+               (/ a (+ 1 2))))
+
+(define c (make-component pi))
 ((component-drawable c) screen 0 0)
 (matrix/display screen)
