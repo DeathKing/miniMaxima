@@ -1,5 +1,7 @@
 (load "test-case.scm")
+(load "screen.scm")
 
+(load-option 'format)
 
 (define (s-exp? s) (list? s))
 (define (atom? s)  (not (pair? s)))
@@ -172,45 +174,25 @@
               ((box/drawable sub1) target sub1/draw-x y)
               ((box/drawable sub2) target sub2/draw-x (+ 1 y baseline)))))))
 
-(define (make-matrix x y)
-  (make-initialized-vector y
-    (lambda (k) (make-vector x '()))))
+(define (make-boxed-formula s margin-horizon margin-vertival)
+  (let ((formula (make-box s)))
+    (let ((width    (+ 2 (box/width formula) (* 2 margin-horizon)))
+          (height   (+ 2 (box/height formula) (* 2 margin-vertival)))
+          (baseline (+ 1 (box/baseline formula) margin-vertival)))
+      (list width
+            height
+            baseline
+            (lambda (target x y)
+              (matrix/draw-box target x y width height)
+              ((box/drawable formula) target
+                                      (+ 1 x margin-horizon)
+                                      (+ 1 y margin-vertival)))))))
 
-(define (matrix/draw s m x y)
-  (if (string-null? s)
-    '()
-    (begin
-      (matrix/put! (string-head s 1) m x y)
-      (matrix/draw (string-tail s 1) m (+ x 1) y))))
-
-(define (matrix/put! s m x y)
-  (vector-set! (vector-ref m y) x s))
-
-(define (vector/println v)
-  (vector-map
-    (lambda (x)
-      (if (null? x)
-        (display " ")
-        (display x)))
-    v)
-  (newline))
-
-(define (matrix/display m)
-  (vector-map vector/println m))
-
-(define (object->string o)
-  (cond
-    ((symbol? o) (symbol->string o))
-    ((number? o) (number->string o))))
-
-(define (display-length o)
-  (string-length (object->string o)))
-  
 (define screen (make-matrix 90 20))
 
+;(matrix/draw-box screen 0 0 30 10)
 (newline)
 
-
-(define c (make-box (p pi)))
+(define c (make-boxed-formula (p '(+ a (+ b c))) 4 1))
 ((box/drawable c) screen 0 0)
 (matrix/display screen)
