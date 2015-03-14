@@ -20,12 +20,15 @@
 (define (arg1 s)     (cadr s))
 (define (arg2 s)     (caddr s))
 
+(define *root*         'root)
+(define *pos-nor-neg*  'pon)
 (define *parenthsises* 'paren)
 (define (sum? s)   (eq? (operator s) '+))
 (define (sub? s)   (eq? (operator s) '-))
 (define (mul? s)   (eq? (operator s) '*))
 (define (div? s)   (eq? (operator s) '/))
-(define (root? s)  (eq? (operator s) 'root))
+(define (pon? s)   (eq? (operator s) *pos-nor-neg*))
+(define (root? s)  (eq? (operator s) *root*))
 (define (paren? s)
   (and (s-exp? s)
        (eq? (operator s) *parenthsises*)))
@@ -39,7 +42,6 @@
     ((mul? s) 2)
     ((div? s) 3)
     (else 3)))
-
 
 (define (paren-add s-exp)  (list *parenthsises* s-exp))
 (define (paren-peel s-exp) (cadr s-exp))
@@ -56,13 +58,6 @@
         (list opr
               (if (> popr pag1)  (paren-add (paren-build ag1)) (paren-build ag1))
               (if (>= popr pag2) (paren-add (paren-build ag2)) (paren-build ag2)))))))
-
-
-(define a '(* (+ 1 2) 3))
-(define b '(/ (+ (/ a
-                    (* b c))
-                 (/ 1 n))
-              3))
 
 (define p paren-build)
 
@@ -91,19 +86,34 @@
                        x
                        y))))
 
+(define (make-root s)
+  (let* ((inner (make-box (arg1 s)))
+         (inner/w (box/width inner))
+         (inner/h (box/height inner)))
+    (let* ((width (+ 2 inner/w inner/h))
+           (height (+ 1 inner/h))
+           (baseline (quotient height 2)))
+      (list width
+            height
+            baseline
+            (lambda (target x y)
+              (matrix/draw-horizon-line target (+ x inner/h) y (+ 2 inner/w) "_")
+              (matrix/draw-dialog-line target "/" (+ -1 x inner/h) (+ 1 y) - + inner/h)
+              (matrix/put! "√" target x (+ y inner/h))
+              ((box/drawable inner) target (+ 1 x inner/h) (+ y 1)))))))
+
 (define (make-paren s)
   (let* ((sub (make-box (paren-peel s)))
          (width (box/width sub))
          (height (box/height sub))
          (baseline (box/baseline sub)))
-   (list (+ 2 width)
-         height
-         baseline
-         (lambda (target x y)
-           (begin
-             (matrix/draw "(" target x                 (+ y baseline))
-             (matrix/draw ")" target (+ 1 x width)     (+ y baseline))
-             ((box/drawable sub) target (+ x 1) y))))))
+    (list (+ 2 width)
+          height
+          baseline
+          (lambda (target x y)
+            (matrix/draw "(" target x                 (+ y baseline))
+            (matrix/draw ")" target (+ 1 x width)     (+ y baseline))
+            ((box/drawable sub) target (+ x 1) y)))))
 
 (define (make-sum s)
   (let* ((sub1 (make-box (arg1 s))) (sub2 (make-box (arg2 s)))
@@ -193,6 +203,6 @@
 ;(matrix/draw-box screen 0 0 30 10)
 (newline)
 
-(define c (make-boxed-formula (p '(+ a (+ b c))) 4 1))
+(define c  (make-box '(root (/ (+ a (+ (root (/ pi 2)) c)) 2))))
 ((box/drawable c) screen 0 0)
 (matrix/display screen)

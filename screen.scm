@@ -9,6 +9,13 @@
       (matrix/put! (string-head s 1) m x y)
       (matrix/draw (string-tail s 1) m (+ x 1) y))))
 
+(define (matrix/draw-dialog-line m s x y px py c)
+  (if (= c 0)
+    '()
+    (begin
+      (matrix/put! s m x y)
+      (matrix/draw-dialog-line m s (px x 1) (py y 1) px py (- c 1)))))
+
 (define (matrix/put! s m x y)
   (vector-set! (vector-ref m y) x s))
 
@@ -37,19 +44,19 @@
     (matrix/put! "+" m x y)
     (matrix/put! (string-head (car p) 0) m x y)))
 
-(define (matrix/draw-vertical-line m x y h)
+(define (matrix/draw-vertical-line m x y h . l)
   (if (= h 1)
     '()
-    (begin
-      (matrix/put! "|" m x y)
-      (matrix/draw-vertical-line m x (+ y 1) (- h 1)))))
+    (let ((l (if (null? l) "|" (car l))))
+      (matrix/put! l m x y)
+      (matrix/draw-vertical-line m x (+ y 1) (- h 1) l))))
 
-(define (matrix/draw-horizon-line m x y w)
+(define (matrix/draw-horizon-line m x y w . l)
   (if (= w 1)
     '()
-    (begin
-      (matrix/put! "-" m x y)
-      (matrix/draw-horizon-line m (+ x 1) y (- w 1)))))
+    (let ((l (if (null? l) "-" (car l))))
+      (matrix/put! l m x y)
+      (matrix/draw-horizon-line m (+ x 1) y (- w 1) l))))
 
 (define (matrix/draw-box m x y w h)
   (matrix/draw-vertical-line m x y h)
