@@ -1,44 +1,59 @@
-(define (get-priority sym)
+(load "test-case.scm")
+
+
+(define (s-exp? s) (list? s))
+(define (atom? s)  (not (pair? s)))
+
+(define (simple-operation? s)
+  (and (not (atom? s))
+       (atom? (arg1 s))
+       (atom? (arg2 s))))
+
+(define (simple-expression? s)
+  (or (atom? s)
+      (and (atom? (arg1 s))
+           (atom? (arg2 s)))))
+
+(define (operator s) (car s))
+(define (arg1 s)     (cadr s))
+(define (arg2 s)     (caddr s))
+
+(define *parenthsises* 'paren)
+(define (sum? s)   (eq? (operator s) '+))
+(define (sub? s)   (eq? (operator s) '-))
+(define (mul? s)   (eq? (operator s) '*))
+(define (div? s)   (eq? (operator s) '/))
+(define (root? s)  (eq? (operator s) 'root))
+(define (paren? s)
+  (and (s-exp? s)
+       (eq? (operator s) *parenthsises*)))
+
+(define (get-priority s)
   (cond
-    ((number? sym) 3)
-    ((eq? sym 'parenthsises) 4)
-    ((eq? sym '/) 1)
-    ((s-exp? sym) (get-priority (operator sym)))
-    ((or (eq? sym '+) (eq? sym '-)) 1)
-    ((eq? sym '*) 2)
+    ((atom?  s) 4)
+    ((paren? s) 5)
+    ((sum? s) 1)
+    ((sub? s) 1)
+    ((mul? s) 2)
+    ((div? s) 3)
     (else 3)))
 
-(define (atom? s)
-  (not (pair? s)))
 
-(define (s-exp? s)
-  (list? s))
-
-(define (arg1 s)
-  (cadr s))
-
-(define (arg2 s)
-  (caddr s))
-
-(define (operator s)
-  (car s))
-
-(define (parenthsised s-exp)
-  (list 'parenthsises s-exp))
-
-(define (parenthsislize s)
+(define (paren-add s-exp)  (list *parenthsises* s-exp))
+(define (paren-peel s-exp) (cadr s-exp))
+(define (try-unparen s)    (if (paren? s) (cadr s) s))
+(define (paren-build s)
   (cond
-    ((atom? s) s)
-    ((and (atom? (arg1 s))
-          (atom? (arg2 s)))
-       s)
+    ((simple-expression? s) s)
+    ((sum? s)
+      (list '+ (paren-build (arg1 s)) (paren-build (arg2 s))))
     (else
-      (let* ((opr (operator s)) (popr (get-priority opr))
+      (let* ((opr (operator s)) (popr (get-priority s))
              (ag1 (arg1 s))     (pag1 (get-priority ag1))
              (ag2 (arg2 s))     (pag2 (get-priority ag2)))
         (list opr
-              (if (> popr pag1) (parenthsised (parenthsislize ag1)) (parenthsislize ag1))
-              (if (>= popr pag2) (parenthsised (parenthsislize ag2)) (parenthsislize ag2)))))))
+              (if (> popr pag1)  (paren-add (paren-build ag1)) (paren-build ag1))
+              (if (>= popr pag2) (paren-add (paren-build ag2)) (paren-build ag2)))))))
 
 
 (define a '(* (+ 1 2) 3))
@@ -47,36 +62,27 @@
                  (/ 1 n))
               3))
 
-(define p parenthsislize)
+(define p paren-build)
 
+(define (box/width c)    (list-ref c 0))
+(define (box/height c)   (list-ref c 1))
+(define (box/baseline c) (list-ref c 2))
+(define (box/drawable c) (list-ref c 3))
 
-(define (component-width c)
-  (car c))
-
-(define (component-height c)
-  (cadr c))
-
-(define (component-drawable c)
-  (caddr c))
-
-(define (make-component s)
+(define (make-box s)
   (cond
     ((atom? s)  (make-atom s))
     ((sum? s)   (make-sum s))
     ((sub? s)   (make-sub s))
     ((mul? s)   (make-mul s))
     ((div? s)   (make-div s))
+    ((root? s)  (make-root s))
     ((paren? s) (make-paren s))))
-
-(define (sum? s)   (eq? (operator s) '+))
-(define (sub? s)   (eq? (operator s) '-))
-(define (mul? s)   (eq? (operator s) '*))
-(define (div? s)   (eq? (operator s) '/))
-(define (paren? s) (eq? (operator s) 'parenthsises))
 
 (define (make-atom s)
   (list (display-length s)
         1
+        0
         (lambda (target x y)
           (matrix/draw (object->string s)
                        target
@@ -84,94 +90,91 @@
                        y))))
 
 (define (make-paren s)
-  (let* ((sub (make-component (cadr s)))
-         (width (component-width sub))
-         (height (component-height sub))
-         (half-height (quotient height 2)))
+  (let* ((sub (make-box (paren-peel s)))
+         (width (box/width sub))
+         (height (box/height sub))
+         (baseline (box/baseline sub)))
    (list (+ 2 width)
          height
+         baseline
          (lambda (target x y)
            (begin
-             (matrix/draw "(" target x                 (+ y half-height))
-             (matrix/draw ")" target (+ 1 x width)     (+ y half-height))
-             ((component-drawable sub) target (+ x 1) y))))))
-
-
+             (matrix/draw "(" target x                 (+ y baseline))
+             (matrix/draw ")" target (+ 1 x width)     (+ y baseline))
+             ((box/drawable sub) target (+ x 1) y))))))
 
 (define (make-sum s)
-  (let* ((sub1 (make-component (arg1 s)))
-         (sub2 (make-component (arg2 s)))
-         (sub1/w (component-width sub1)) (sub1/h (component-height sub1))
-         (sub2/w (component-width sub2)) (sub2/h (component-height sub2))
+  (let* ((sub1 (make-box (arg1 s))) (sub2 (make-box (arg2 s)))
+         (sub1/w (box/width sub1)) (sub1/h (box/height sub1)) (sub1/b (box/baseline sub1))
+         (sub2/w (box/width sub2)) (sub2/h (box/height sub2)) (sub2/b (box/baseline sub2))
          (width (+ 3 sub1/w sub2/w))
-         (height (max sub1/h sub2/h))
-         (half-height (quotient height 2)))
+         (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
+         (baseline (max sub1/b sub2/b)))
     (list width
           height
+          baseline
           (lambda (target x y)
-            (let ((sub1/draw-y (+ y (quotient (- height sub1/h) 2)))
-                  (sub2/draw-y (+ y (quotient (- height sub2/h) 2))))
-              (matrix/draw "+" target (+ 1 x sub1/w) (+ y half-height))
-              ((component-drawable sub1) target x              sub1/draw-y)
-              ((component-drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
- 
+            (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                  (sub2/draw-y (+ y (- baseline sub2/b))))
+              (matrix/draw "+" target (+ 1 x sub1/w) (+ y baseline))
+              ((box/drawable sub1) target x              sub1/draw-y)
+              ((box/drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
 
 (define (make-sub s)
-  (let* ((sub1 (make-component (arg1 s)))
-         (sub2 (make-component (arg2 s)))
-         (sub1/w (component-width sub1)) (sub1/h (component-height sub1))
-         (sub2/w (component-width sub2)) (sub2/h (component-height sub2))
+  (let* ((sub1 (make-box (arg1 s))) (sub2 (make-box (arg2 s)))
+         (sub1/w (box/width sub1)) (sub1/h (box/height sub1)) (sub1/b (box/baseline sub1))
+         (sub2/w (box/width sub2)) (sub2/h (box/height sub2)) (sub2/b (box/baseline sub2))
          (width (+ 3 sub1/w sub2/w))
-         (height (max sub1/h sub2/h))
-         (half-height (quotient height 2)))
+         (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
+         (baseline (max sub1/b sub2/b)))
     (list width
           height
+          baseline
           (lambda (target x y)
-            (let ((sub1/draw-y (+ y (quotient (- height sub1/h) 2)))
-                  (sub2/draw-y (+ y (quotient (- height sub2/h) 2))))
-              (matrix/draw "-" target (+ 1 x sub1/w) (+ y half-height))
-              ((component-drawable sub1) target x              sub1/draw-y)
-              ((component-drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
- 
+            (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                  (sub2/draw-y (+ y (- baseline sub2/b))))
+              (matrix/draw "-" target (+ 1 x sub1/w) (+ y baseline))
+              ((box/drawable sub1) target x              sub1/draw-y)
+              ((box/drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
 
 (define (make-mul s)
-  (let* ((sub1 (make-component (arg1 s)))
-         (sub2 (make-component (arg2 s)))
-         (sub1/w (component-width sub1)) (sub1/h (component-height sub1))
-         (sub2/w (component-width sub2)) (sub2/h (component-height sub2))
+  (let* ((sub1 (make-box (arg1 s))) (sub2 (make-box (arg2 s)))
+         (sub1/w (box/width sub1)) (sub1/h (box/height sub1)) (sub1/b (box/baseline sub1))
+         (sub2/w (box/width sub2)) (sub2/h (box/height sub2)) (sub2/b (box/baseline sub2))
          (width (+ 3 sub1/w sub2/w))
-         (height (max sub1/h sub2/h))
-         (half-height (quotient height 2)))
+         (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
+         (baseline (max sub1/b sub2/b)))
     (list width
           height
+          baseline
           (lambda (target x y)
-            (let ((sub1/draw-y (+ y (quotient (- height sub1/h) 2)))
-                  (sub2/draw-y (+ y (quotient (- height sub2/h) 2))))
-              (matrix/draw "*" target (+ 1 x sub1/w) (+ y half-height))
-              ((component-drawable sub1) target x              sub1/draw-y)
-              ((component-drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
- 
+            (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                  (sub2/draw-y (+ y (- baseline sub2/b))))
+              (matrix/draw "*" target (+ 1 x sub1/w) (+ y baseline))
+              ((box/drawable sub1) target x              sub1/draw-y)
+              ((box/drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
 
 (define (make-div s)
-  (let* ((sub1 (make-component (arg1 s)))
-         (sub2 (make-component (arg2 s)))
-         (sub1/w (component-width sub1)) (sub1/h (component-height sub1))
-         (sub2/w (component-width sub2)) (sub2/h (component-height sub2))
+  (let* ((sub1 (make-box (try-unparen (arg1 s))))
+         (sub2 (make-box (try-unparen (arg2 s))))
+         (sub1/w (box/width sub1)) (sub1/h (box/height sub1))
+         (sub2/w (box/width sub2)) (sub2/h (box/height sub2))
          (width  (+ 2 (max sub1/w sub2/w)))
-         (height (+ 1 sub1/h sub2/h)))
+         (height (+ 1 sub1/h sub2/h))
+         (baseline (box/height sub1)))
     (list width
           height
+          baseline
           (lambda (target x y)
             (let ((sub1/draw-x (+ x (quotient (- width sub1/w) 2)))
                   (sub2/draw-x (+ x (quotient (- width sub2/w) 2))))
-              (matrix/draw (make-string width #\-) target x (+ y sub1/h))
-              ((component-drawable sub1) target sub1/draw-x y)
-              ((component-drawable sub2) target sub2/draw-x (+ 1 y sub1/h)))))))
+              (matrix/draw (make-string width #\-) target x (+ y baseline))
+              ((box/drawable sub1) target sub1/draw-x y)
+              ((box/drawable sub2) target sub2/draw-x (+ 1 y baseline)))))))
 
 (define (make-matrix x y)
   (make-initialized-vector y
     (lambda (k) (make-vector x '()))))
-
 
 (define (matrix/draw s m x y)
   (if (string-null? s)
@@ -203,22 +206,11 @@
 (define (display-length o)
   (string-length (object->string o)))
   
-(define screen (make-matrix 30 20))
+(define screen (make-matrix 90 20))
 
 (newline)
 
-(define pi '(+ 1
-               (/ 1
-                  (+ 3
-                     (/ 4
-                        (+ 5
-                           (/ 9
-                              (+ 7
-                                 (/ 16
-                                    (+ 9 a))))))))))
-(define sp '(/ 1
-               (/ a (+ 1 2))))
 
-(define c (make-component pi))
-((component-drawable c) screen 0 0)
+(define c (make-box (p pi)))
+((box/drawable c) screen 0 0)
 (matrix/display screen)
