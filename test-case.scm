@@ -16,3 +16,9 @@
                                  (/ 168
                                     (* (+ x y) a))))))
                      (/ m n))))))
+
+(define t2 '(root (+ 2
+                     (/ (power (root 2)
+                               (/ 1 3))
+                        (power (root 6)
+                             (/ b (+ 2 a)))))))

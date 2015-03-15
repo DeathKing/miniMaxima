@@ -21,26 +21,31 @@
 (define (arg2 s)     (caddr s))
 
 (define *root*         'root)
+(define *power*        'power)
 (define *pos-nor-neg*  'pon)
 (define *parenthsises* 'paren)
+
 (define (sum? s)   (eq? (operator s) '+))
 (define (sub? s)   (eq? (operator s) '-))
 (define (mul? s)   (eq? (operator s) '*))
 (define (div? s)   (eq? (operator s) '/))
 (define (pon? s)   (eq? (operator s) *pos-nor-neg*))
 (define (root? s)  (eq? (operator s) *root*))
+(define (power? s) (eq? (operator s) *power*))
 (define (paren? s)
   (and (s-exp? s)
        (eq? (operator s) *parenthsises*)))
 
 (define (get-priority s)
   (cond
-    ((atom?  s) 4)
-    ((paren? s) 5)
-    ((sum? s) 1)
-    ((sub? s) 1)
-    ((mul? s) 2)
-    ((div? s) 3)
+    ((atom?  s) 20)
+    ((paren? s) 30)
+    ((sum? s)   1)
+    ((sub? s)   1)
+    ((mul? s)   2)
+    ((div? s)   3)
+    ((root?  s) 5)
+    ((power? s) 5)
     (else 3)))
 
 (define (paren-add s-exp)  (list *parenthsises* s-exp))
@@ -74,6 +79,7 @@
     ((mul? s)   (make-mul s))
     ((div? s)   (make-div s))
     ((root? s)  (make-root s))
+    ((power? s) (make-power s))
     ((paren? s) (make-paren s))))
 
 (define (make-atom s)
@@ -101,6 +107,21 @@
               (matrix/draw-dialog-line target "/" (+ -1 x inner/h) (+ 1 y) - + inner/h)
               (matrix/put! "√" target x (+ y inner/h))
               ((box/drawable inner) target (+ 1 x inner/h) (+ y 1)))))))
+
+(define (make-power s)
+  (let* ((base (make-box (arg1 s)))
+         (exp (make-box (arg2 s)))
+         (base/w (box/width base)) (base/h (box/height base)) (base/b (box/baseline base))
+         (exp/w  (box/width exp))  (exp/h (box/height exp))   (exp/b (box/baseline exp)))
+    (let* ((width (+ 1 (box/width base) (box/width exp)))
+           (height (+ 1 (box/baseline exp) (max base/h (- exp/h exp/b))))
+           (baseline (+ base/b exp/b)))
+      (list width
+            height
+            baseline
+            (lambda (target x y)
+              ((box/drawable base) target x (+ y exp/b))
+              ((box/drawable exp)  target (+ x base/w) y))))))
 
 (define (make-paren s)
   (let* ((sub (make-box (paren-peel s)))
@@ -202,7 +223,7 @@
 
 ;(matrix/draw-box screen 0 0 30 10)
 (newline)
-
-(define c  (make-box '(root (/ (+ a (+ (root (/ pi 2)) c)) 2))))
+;  '(root (/ (+ a (+ (root (/ pi 2)) c)) 2))))
+(define c  (make-box t2))
 ((box/drawable c) screen 0 0)
 (matrix/display screen)
