@@ -2,6 +2,9 @@
   (make-initialized-vector y
     (lambda (k) (make-vector x '()))))
 
+(define (matrix/put! s m x y)
+  (vector-set! (vector-ref m y) x s))
+
 (define (matrix/draw s m x y)
   (if (string-null? s)
     '()
@@ -9,15 +12,12 @@
       (matrix/put! (string-head s 1) m x y)
       (matrix/draw (string-tail s 1) m (+ x 1) y))))
 
-(define (matrix/draw-dialog-line m s x y px py c)
+(define (matrix/draw-dialog-line m x y px py c s)
   (if (= c 0)
     '()
     (begin
       (matrix/put! s m x y)
-      (matrix/draw-dialog-line m s (px x 1) (py y 1) px py (- c 1)))))
-
-(define (matrix/put! s m x y)
-  (vector-set! (vector-ref m y) x s))
+      (matrix/draw-dialog-line m (px x 1) (py y 1) px py (- c 1) s))))
 
 (define (vector/println v)
   (vector-map
