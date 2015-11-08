@@ -1,0 +1,1 @@
+(load-relative "test-load-relative.scm")

@@ -1,6 +1,9 @@
+; char-buffer.scm
+
 (define (make-matrix x y)
   (make-initialized-vector y
-    (lambda (k) (make-vector x '()))))
+    (lambda (k)
+      (make-vector x '()))))
 
 (define (matrix/put! s m x y)
   (vector-set! (vector-ref m y) x s))
@@ -22,9 +25,7 @@
 (define (vector/println v)
   (vector-map
     (lambda (x)
-      (if (null? x)
-        (display " ")
-        (display x)))
+      (if (null? x) (display " ") (display x)))
     v)
   (newline))
 

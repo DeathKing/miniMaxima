@@ -11,9 +11,11 @@
 (define (box/baseline c) (list-ref c 2))
 (define (box/drawable c) (list-ref c 3))
 
+; make-box :: EXP -> BOX
 (define (make-box s)
   (cond
     ((atom? s)  (make-box/atom s))
+    ((neg? s)   (make-box/neg  s))
     ((sum? s)   (make-box/sum s))
     ((sub? s)   (make-box/sub s))
     ((mul? s)   (make-box/mul s))
@@ -24,6 +26,7 @@
     (else
       (error "Unknon type of expression -- " s))))
 
+; Atom is simple enough so that we can build it easily
 (define (make-box/atom s)
   (box/create (display-length s)
               1
@@ -34,8 +37,15 @@
                              x
                              y))))
 
-(define (make-box/root s)
+(define (make-box/neg s)
   (let* ((inner (make-box (arg1 s)))
+         (inner/w (box/width inner))
+         (inner/h (box/height inner)))
+    ))
+
+
+(define (make-box/root s)
+  (let* ((inner (make-box (exp/arg1 s)))
          (inner/w (box/width inner))
          (inner/h (box/height inner)))
     (let* ((width (+ 2 inner/w inner/h))
@@ -51,8 +61,8 @@
                     ((box/drawable inner)     target (+ 1 x inner/h)  (+ y 1)))))))
 
 (define (make-box/power s)
-  (let* ((base (make-box (arg1 s)))
-         (exp  (make-box (arg2 s)))
+  (let* ((base (make-box (exp/arg1 s)))
+         (exp  (make-box (exp/arg2 s)))
          (base/w (box/width base)) (base/h (box/height base)) (base/b (box/baseline base))
          (exp/w  (box/width exp))  (exp/h (box/height exp))   (exp/b (box/baseline exp)))
     (let* ((width (+ base/w exp/w))
@@ -62,11 +72,11 @@
                   height
                   baseline
                   (lambda (target x y)
-                    ((box/drawable base) target x            (+ y exp/b))
+                    ((box/drawable base) target x (+ y exp/b))
                     ((box/drawable exp)  target (+ x base/w) y))))))
 
 (define (make-box/paren s)
-  (let* ((sub (make-box (paren-peel s)))
+  (let* ((sub (make-box (exp/peel-paren s)))
          (width (box/width sub))
          (height (box/height sub))
          (baseline (box/baseline sub)))
@@ -74,43 +84,45 @@
                 height
                 baseline
                 (lambda (target x y)
-                  (matrix/draw "(" target x                 (+ y baseline))
-                  (matrix/draw ")" target (+ 1 x width)     (+ y baseline))
+                  (matrix/draw "(" target x             (+ y baseline))
+                  (matrix/draw ")" target (+ 1 x width) (+ y baseline))
                   ((box/drawable sub) target (+ x 1) y)))))
 
 (define (make-box/sum s)
-  (let* ((sub1 (make-box (arg1 s))) (sub2 (make-box (arg2 s)))
+  (let* ((sub1 (make-box (exp/arg1 s)))
+         (sub2 (make-box (exp/arg2 s)))
          (sub1/w (box/width sub1)) (sub1/h (box/height sub1)) (sub1/b (box/baseline sub1))
          (sub2/w (box/width sub2)) (sub2/h (box/height sub2)) (sub2/b (box/baseline sub2))
          (width (+ 3 sub1/w sub2/w))
          (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
          (baseline (max sub1/b sub2/b)))
     (box/create width
-          height
-          baseline
-          (lambda (target x y)
-            (let ((sub1/draw-y (+ y (- baseline sub1/b)))
-                  (sub2/draw-y (+ y (- baseline sub2/b))))
-              (matrix/draw "+" target (+ 1 x sub1/w) (+ y baseline))
-              ((box/drawable sub1) target x              sub1/draw-y)
-              ((box/drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
+                height
+                baseline
+                (lambda (target x y)
+                  (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                        (sub2/draw-y (+ y (- baseline sub2/b))))
+                    (matrix/draw "+" target (+ 1 x sub1/w) (+ y baseline))
+                    ((box/drawable sub1) target x              sub1/draw-y)
+                    ((box/drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
 
 (define (make-box/sub s)
-  (let* ((sub1 (make-box (arg1 s))) (sub2 (make-box (arg2 s)))
+  (let* ((sub1 (make-box (exp/arg1 s)))
+         (sub2 (make-box (exp/arg2 s)))
          (sub1/w (box/width sub1)) (sub1/h (box/height sub1)) (sub1/b (box/baseline sub1))
          (sub2/w (box/width sub2)) (sub2/h (box/height sub2)) (sub2/b (box/baseline sub2))
          (width (+ 3 sub1/w sub2/w))
          (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
          (baseline (max sub1/b sub2/b)))
     (box/create width
-          height
-          baseline
-          (lambda (target x y)
-            (let ((sub1/draw-y (+ y (- baseline sub1/b)))
-                  (sub2/draw-y (+ y (- baseline sub2/b))))
-              (matrix/draw "-" target (+ 1 x sub1/w) (+ y baseline))
-              ((box/drawable sub1) target x              sub1/draw-y)
-              ((box/drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
+                height
+                baseline
+                (lambda (target x y)
+                  (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                        (sub2/draw-y (+ y (- baseline sub2/b))))
+                    (matrix/draw "-" target (+ 1 x sub1/w) (+ y baseline))
+                    ((box/drawable sub1) target x              sub1/draw-y)
+                    ((box/drawable sub2) target (+ 3 x sub1/w) sub2/draw-y))))))
 
 (define (make-box/mul s)
   (let* ((sub1 (make-box (arg1 s))) (sub2 (make-box (arg2 s)))
