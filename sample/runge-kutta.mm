@@ -2,10 +2,4 @@ using pmatch;
 using format;
 using printf;
 
-
-// diff['x+y', 'x'];
-//
-// 
-//
-
-
+printf "sample ~A ~A." [1, 2]

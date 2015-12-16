@@ -1,0 +1,2 @@
+(load-relative "memo")
+
