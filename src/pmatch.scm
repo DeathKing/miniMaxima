@@ -1,3 +1,7 @@
+; A minor update made by DeathKing (December 16, 2015)
+; To adapted to MIT-Scheme format function
+(load-option 'format)
+
 ; This is an updated version of pmatch (August 28, 2013).
 ; Modified by Jason Hemann and Dan Friedman
 
@@ -46,9 +50,9 @@
     ((_ w name v)
      (begin
        (if 'name
-           (printf "pmatch ~s failed\n" 'name)
-           (printf "pmatch failed\n"))
-       (printf "with input ~s evaluating to ~s\n" w v)
+           (format #t "pmatch ~A failed\n" 'name)
+           (format #t "pmatch failed\n"))
+       (format #t "with input ~A evaluating to ~A\n" w v)
        (error 'pmatch "match failed")))
     ((_ w name v (else e0 e ...)) (begin e0 e ...))
     ((_ w name v ((quasiquote pat) (guard g ...) e0 e ...) cs ...)
