@@ -3,19 +3,18 @@
 (load-option 'format)
 
 (define (memoize func)
-  (let ((table (make-equal-hash-table)))
+  (let ((table (make-equal-hash-table))
+        (id (lambda (x) x)))
     (lambda args
-      (hash-table/lookup table args 
-        (lambda (x)
-          (format #t "Cache hit for args is ~A.~%" x)
-          x)
-        (lambda ()
-          (format #t "Cache missing for args is ~A.~%" args)
-          (let ((res (apply func args)))
-            (hash-table/put! table args res)
-            res))))))
+      (hash-table/lookup table
+                         args 
+                         id
+                         (lambda ()
+                           (let ((res (apply func args)))
+                             (hash-table/put! table args res)
+                             res))))))
 
-(define (memoize-cps func)
+(define (memoize-cps fn)
   (let ((table (list)))
     (let* ((entry-continuations car)
            (entry-results cdr)
@@ -35,24 +34,28 @@
              (lambda (str)
                (pmatch (assoc str table)
                        (`(,str . ,entry) entry)
-                       (`,_
-                        (let ((entry make-entry))
-                          (set! table (cons (cons str entry) table))
-                          entry))))))
+                       (`,__
+                         (let ((entry (make-entry)))
+                           (set! table (cons (cons str entry) table))
+                           entry))))))
       (lambda (str cont)
         (let ((entry (table-ref str)))
           (pmatch entry
-                  (`('() . '())
-                   (push-continuation! entry cont)
-                   (fn str (lambda (result)
-                             (if (result-subsumed? entry result)
-                                 (for ((cont (entry-continuations entry)))
-                                      (cont result))
-                                 (push-result! entry result)))))
-                  (`,_
-                   (push-continuation! entry cont)
-                   (for ((resutle (entry-results entry)))
-                        (cont result)))))))))
+                  (`(() . ())
+                     (push-continuation! entry cont)
+                     (fn str (lambda (result)
+                               (format #t "result is ~A.\n" result)
+                               (format #t "Results is ~A.\n" (entry-results entry))
+                               (if (result-subsumed? entry result)
+                                   (for-each
+                                     (lambda (cont) (cont result))
+                                     (entry-continuations entry))
+                                   (begin (format #t "result pushed!~%")(push-result! entry result))))))
+                  (`,__
+                    (push-continuation! entry cont)
+                    (for-each
+                      (lambda (result) (cont result))
+                      (entry-results entry)))))))))
 
 (define-syntax %:memoize!
   (syntax-rules ()

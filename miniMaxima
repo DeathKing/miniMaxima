@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+ROOT_PATH="$(dirname "$(readlink -f "$0")")"
+
+mit-scheme --band $ROOT_PATH/boot.com \
+           --load $ROOT_PATH/main.scm \
+           --root $ROOT_PATH
