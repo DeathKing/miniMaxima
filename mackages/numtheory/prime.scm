@@ -18,7 +18,7 @@
 ;;;
 ;;; Another way to fast GCD computation.
 ;;;
-;;; TODO: No much speed efficient. see benchmark/gcd.scm
+;;; TODO: Not so speed-efficient. see benchmark/gcd.scm
 (define (Stein a b)
   (cond ((zero? a) b)
         ((zero? b) a)

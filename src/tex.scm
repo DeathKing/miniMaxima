@@ -1,4 +1,1 @@
-(load "sexp.scm")
-
-
-(define (make-box/frac))
+(format #t "hello! ~%")
