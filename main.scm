@@ -17,6 +17,7 @@
       (load full-path))))
 
 ;;; require is same like load except that it wouln't load same file twice
+;;; TODO: may conflict with slib require
 (define (require filename)
   (let ((full-path
          (format #f "~A~A" (directory-namestring (working-directory-pathname)) filename)))
@@ -25,7 +26,6 @@
         (begin
           (set! MM/LoadedFile (cons full-path MM/LoadedFile))
           (load full-path)))))
-
 
 (define (require-relative filename)
   (let ((full-path

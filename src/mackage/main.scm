@@ -20,7 +20,7 @@
                   (error "mkg should be a string or symbol -- " mkg)))))
         (let ((path (string-append Mackage/RepoDir mkg-name "/main.scm")))
           (if (file-exists? path)
-              (require-relative path)
+              (load path)
               (error "file not exists for -- " path))))))
 
 (define Mackage/Use use-mackage)

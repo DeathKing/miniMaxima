@@ -1,5 +1,3 @@
-(define (XYBuffer/GetConsoleWidth))
-
 (define XYBuffer/*DefaultHeight* 20)
 
 (define (XYBuffer/New width . height)

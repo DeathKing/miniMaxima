@@ -5,13 +5,11 @@
 ;;; By typeless it means the env is basically a list structure and we never
 ;;; even put a tag on it.
 
-;;; c - MakeEmptyEnv
-;;;
-;;; Make a new empty env.
-(define (MakeEmptyEnv)
+;;; Make a new (empty) env.
+(define (Env/New)
   '())
 
-(define MakeEnvFromEntries
+(define Env/MakeFromEntries
   list)
 
 ;;; p - Env/Empty?
@@ -53,5 +51,3 @@
       (let ((entry (car env)))
         (format #t "~A => ~A ~%" (car entry) (cdr entry))
         (Env/Inspect (cdr env)))))
-
-

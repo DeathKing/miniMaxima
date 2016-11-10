@@ -1,9 +1,7 @@
-;(define-syntax q-guard
-;  (syntax-rules (_)
-;    ((_ q default)
-;     (if (null? q) default q))
-;    (else
-;      (error "ill-formed syntax!"))))
+(define-syntax q-guard
+  (syntax-rules ()
+    ((_ q default)
+     (if (null? q) default q))))
 
 (define qval-guard
   (lambda (val default)

@@ -2,26 +2,40 @@
 ;;;
 ;;; Simple and basic arithmetic system.
 
-(define MakeAlgeExprWithTag list)
+(define TagExpr/New list)
 
-(define (AlgeExpr/Tag expr) (list-ref expr 0))
+(define (TagExpr/Tag expr) (list-ref expr 0))
 
-(define (AlgeExpr/Atom? expr)
+(define (Expr/IsTagExpr? expr)
+  (and (pair? expr) (> (length expr) 1) (symbol? (car expr))))
+
+(define (Expr/TaggedExpr? expr tag)
+  (and (Expr/IsTagExpr) (eq? (car expr) tag)))
+
+(define (Expr/IsAtom? expr)
   (and (not (pair? expr)) (not (null? expr))))
 
-(define (MakeAddExpr a b)  (MakeAlgeExprWithTag 'add a b))
-(define (MakeSubExpr a b)  (MakeAlgeExprWithTag 'sub a b))
-(define (MakeDivExpr a b)  (MakeAlgeExprWithTag 'div a b))
-(define (MakeMulExpr a b)  (MakeAlgeExprWithTag 'mul a b))
-(define (MakeExptExpr a b) (MakeAlgeExprWithTag 'expt a b))
-(define (MakeFuncExpr f a) (MakeAlgeExprWithTag 'func a))
+(define (AddExpr/New   a b) (TagExpr/New 'add a b))
+(define (SubExpr/New   a b) (TagExpr/New 'sub a b))
+(define (MulExpr/New   a b) (TagExpr/New 'mul a b))
+(define (DivExpr/New   a b) (TagExpr/New 'div a b))
+(define (ExptExpr/New  a b) (TagExpr/New 'expt a b))
+(define (FuncExpr/New  f a) (TagExpr/New 'func a))
 
+(define (TagExpr/AddExpr? expr) (Expr/TaggedExpr? expr 'add))
+(define (TagExpr/SubExpr? expr) (Expr/TaggedExpr? expr 'sub))
+(define (TagExpr/MulExpr? expr) (Expr/TaggedExpr? expr 'mul))
+(define (TagExpr/DivExpr? expr) (Expr/TaggedExpr? expr 'div))
+(define (TagExpr/ExptExpr? expr) (Expr/TaggedExpr? expr 'expt))
+(define (TagExpr/FuncExpr? expr) (Expr/TaggedExpr? expr 'func))
+
+; TODO: MakeSumExpr should better be a syntax
 (define (MakeSumExpr . args)
   (cond ((= 1 (length args)) args)
-        ((= 2 (length args)) (MakeAddExpr (car args) (cadr args)))
+        ((= 2 (length args)) (AddExpr/New (car args) (cadr args)))
         (else
-          (apply MakeSumExpr
-                 (cons (MakeAddExpr (car args) (cadr args)) (cddr args))))))
+          (apply SumExpr/New
+                 (cons (AddExpr/New (car args) (cadr args)) (cddr args))))))
 
 (define (AddExpr/LHS expr) (list-ref expr 1))
 (define (AddExpr/RHS expr) (list-ref expr 2))
@@ -38,4 +52,29 @@
 (define (ExptExpr/Base expr) (list-ref expr 1))
 (define (ExptExpr/Exponent expr) (list-ref expr 2))
 
-(define (Poly/Const expr))
+(define (FuncExpr/Fx expr) (list-ref expr 1))
+(define (FuncExpr/Args expr) (list-ref expr 2))
+
+(define (TagExpr/SexprToExpr sexpr)
+  (cond ((or (null? sexpr) (symbol? sexpr) (number? sexpr))
+         sexpr)
+        ((and (= (length sexpr) 3) (eq? (car sexpr) '+))
+         (AddExpr/New (TagExpr/SexprToExpr (cadr sexpr))
+                      (TagExpr/SexprToExpr (caddr sexpr))))
+        ((and (= (length sexpr) 3) (eq? (car sexpr) '-))
+         (SubExpr/New (TagExpr/SexprToExpr (cadr sexpr))
+                      (TagExpr/SexprToExpr (caddr sexpr))))
+        ((and (= (length sexpr) 3) (eq? (car sexpr) '*))
+         (MulExpr/New (TagExpr/SexprToExpr (cadr sexpr))
+                      (TagExpr/SexprToExpr (caddr sexpr))))
+        ((and (= (length sexpr) 3) (eq? (car sexpr) '/))
+         (DivExpr/New (TagExpr/SexprToExpr (cadr sexpr))
+                      (TagExpr/SexprToExpr (caddr sexpr))))
+        ((and (= (length sexpr) 3) (eq? (car sexpr) '^))
+         (ExptExpr/New (TagExpr/SexprToExpr (cadr sexpr))
+                       (TagExpr/SexprToExpr (caddr sexpr))))
+        (else
+         (FuncExpr/New (TagExpr/SexprToExpr (car sexpr))
+                       (TagExpr/SexprToExpr (cadr sexpr))))))
+
+

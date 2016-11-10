@@ -4,7 +4,7 @@
 ;  (let (eq (map UnifyConurenceModulo eqs))))
 
 (define (MakeConguMod f m . from)
-  (MakeAlgeExprWithTag 'congumod f m from))
+  (TagExpr/New 'congumod f m from))
 
 (define (ConguModEq/Fx eq)            (list-ref eq 1))
 (define (ConguModEq/Modulus eq)       (list-ref eq 2))
@@ -12,7 +12,7 @@
 (define (ConguModEq/Const eq var)     (Poly/Const (ConguModeEq/Fx eq) var))
 
 (define (MakeConguModEqs . eqs)
-  (MakeAlgeExprWithTag 'conguod-eqs eqs))
+  (TagExpr/New 'conguod-eqs eqs))
 
 (define (ConguModeEqs/Eqs eqs)
   (list-ref eqs 1))

@@ -1,5 +1,5 @@
-(load-relative "basic-arith.scm")
-(load-relative "env.scm")
+(require-relative "basic.scm")
+(require-relative "env.scm")
 
 (define *gEvTable* '())
 
@@ -9,69 +9,78 @@
 (define (InstallEvalProcedure tag p evtable)
   (Env/Extend tag p *gEvTable*))
 
-(define (AlgeExpr/Eval expr env)
-  (if (AlgeExpr/Atom? expr)
-      (AlgeExpr/EvalAtom expr env)
-      (let ((evp (Env/Lookup (AlgeExpr/Tag expr) *gEvTable*)))
-        (evp expr env))))
-
-;;; AlgeExpr/EvalAtom
+;;; Expr/EvalAtom
 ;;;
 ;;; Evaluate a atom expression
-(define (AlgeExpr/EvalAtom expr env)
+(define (AtomExpr/Eval expr env)
   (cond ((number? expr) expr)
         ((symbol? expr) (Env/Lookup expr env))
-        (else (error "expr is not a atom expression -- " expr))))
+        (else
+          (error "expr is not a atom expression -- " expr))))
 
-(define (AlgeExpr/EvalAdd expr env)
-  (let ((lhs (AlgeExpr/Eval (AddExpr/LHS expr) env))
-        (rhs (AlgeExpr/Eval (AddExpr/RHS expr) env))
-        (add (AlgeExpr/Eval 'add env)))
+(define (TagExpr/Eval expr env)
+  (if (TagExpr/Atom? expr)
+      (AtomExpr/Eval expr env)
+      (let ((evp (Env/Lookup (TagExpr/Tag expr) *gEvTable*)))
+        (evp expr env))))
+
+(define (AddExpr/Eval expr env)
+  (let ((lhs (TagExpr/Eval (AddExpr/LHS expr) env))
+        (rhs (TagExpr/Eval (AddExpr/RHS expr) env))
+        (add (TagExpr/Eval 'add env)))
     ; TODO: maybe poly-add
     (add lhs rhs)))
 
-(define (AlgeExpr/EvalSub expr env)
-  (let ((lhs (AlgeExpr/Eval (SubExpr/LHS expr) env))
-        (rhs (AlgeExpr/Eval (SubExpr/RHS expr) env))
-        (sub (AlgeExpr/Eval 'sub env)))
+(define (SubExpr/Eval expr env)
+  (let ((lhs (TagExpr/Eval (SubExpr/LHS expr) env))
+        (rhs (TagExpr/Eval (SubExpr/RHS expr) env))
+        (sub (TagExpr/Eval 'sub env)))
     ; TODO: maybe poly-sub
     (sub lhs rhs)))
 
-(define (AlgeExpr/EvalMul expr env)
-  (let ((lhs (AlgeExpr/Eval (MulExpr/LHS expr) env))
-        (rhs (AlgeExpr/Eval (MulExpr/RHS expr) env))
-        (mul (AlgeExpr/Eval 'mul env)))
+(define (MulExpr/Eval expr env)
+  (let ((lhs (TagExpr/Eval (MulExpr/LHS expr) env))
+        (rhs (TagExpr/Eval (MulExpr/RHS expr) env))
+        (mul (TagExpr/Eval 'mul env)))
     (mul lhs rhs)))
 
-(define (AlgeExpr/EvalDiv expr env)
-  (let ((lhs (AlgeExpr/Eval (DivExpr/LHS expr) env))
-        (rhs (AlgeExpr/Eval (DivExpr/RHS expr) env))
-        (div (AlgeExpr/Eval 'div env)))
+(define (DivExpr/Eval expr env)
+  (let ((lhs (TagExpr/Eval (DivExpr/LHS expr) env))
+        (rhs (TagExpr/Eval (DivExpr/RHS expr) env))
+        (div (TagExpr/Eval 'div env)))
     (div lhs rhs)))
 
-(define (AlgeExpr/EvalExpt expr env)
-  (let ((base (AlgeExpr/Eval (ExptExpr/Base expr) env))
-        (exp  (AlgeExpr/Eval (ExptExpr/Exponent expr) env))
-        (expt (AlgeExpr/Eval 'expt env)))
+(define (ExptExpr/Eval expr env)
+  (let ((base (TagExpr/Eval (ExptExpr/Base expr) env))
+        (exp  (TagExpr/Eval (ExptExpr/Exponent expr) env))
+        (expt (TagExpr/Eval 'expt env)))
     (expt base exp)))
+
+(define (DeriveExpr/Eval expr env)
+  (let ((fx (DeriveExpr/Fx expr))
+        (var (DeriveExpr/Var expr)))
+    (TagExpr/Eval (derive fx var) env)))
 
 (define (FastExpt b n)
   (cond ((= n 0) 1)
-        ((even? n) (let ((x (FastExpt b (/ n 2)))) (* x x)))
-        (else (* b (FastExpt b (- n 1))))))
+        ((even? n)
+         (let ((x (FastExpt b (/ n 2))))
+           (* x x)))
+        (else 
+          (* b (FastExpt b (- n 1))))))
 
 (define *DefaultEnv*
-  (MakeEnvFromEntries (cons 'add +)
-                      (cons 'sub -)
-                      (cons 'mul *)
-                      (cons 'div /)
-                      (cons 'expt FastExpt)))
+  (Env/MakeFromEntries (cons 'add +)
+                       (cons 'sub -)
+                       (cons 'mul *)
+                       (cons 'div /)
+                       (cons 'expt FastExpt)))
 
-(InstallEvalProcedureGlobal! 'add  AlgeExpr/EvalAdd)
-(InstallEvalProcedureGlobal! 'sub  AlgeExpr/EvalSub)
-(InstallEvalProcedureGlobal! 'div  AlgeExpr/EvalDiv)
-(InstallEvalProcedureGlobal! 'mul  AlgeExpr/EvalMul)
-(InstallEvalProcedureGlobal! 'expt AlgeExpr/EvalExpt)
+(InstallEvalProcedureGlobal! 'add  AddExpr/Eval)
+(InstallEvalProcedureGlobal! 'sub  SubExpr/Eval)
+(InstallEvalProcedureGlobal! 'div  DivExpr/Eval)
+(InstallEvalProcedureGlobal! 'mul  MulExpr/Eval)
+(InstallEvalProcedureGlobal! 'expt ExptExpr/Eval)
 
 ;(Env/Inspect *DefaultEnv*)
 
@@ -79,16 +88,16 @@
 
 ;; Test:
 ;; Eval( 3 + 2 == 5)
-;(display (AlgeExpr/Eval (MakeAddExpr 3 2) *DefaultEnv*))
+;(display (Expr/Eval (MakeAddExpr 3 2) *DefaultEnv*))
 
 ;(newline)
 
 ;; Eval( 2 * x + 3 == 9) where ((x . 3))
-;(display (AlgeExpr/Eval (MakeAddExpr (MakeMulExpr 2 'x) 3)
+;(display (Expr/Eval (MakeAddExpr (MakeMulExpr 2 'x) 3)
 ;                        (Env/Extend 'x 3 *DefaultEnv*)))
 
 ;(newline)
 
 ;; Eval( 2 * x ^ 2 - 4 == 14) where ((x . 3))
-;(display (AlgeExpr/Eval (MakeSubExpr (MakeMulExpr 2 (MakeExptExpr 'x 2)) 4)
+;(display (Expr/Eval (MakeSubExpr (MakeMulExpr 2 (MakeExptExpr 'x 2)) 4)
 ;                        (Env/Extend 'x 3 *DefaultEnv*)))

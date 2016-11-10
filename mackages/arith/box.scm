@@ -1,9 +1,11 @@
+(use-mackage 'xybuffer)
+
 (define *gBoxTable* '())
 
 (define (InstallBoxProcedureGlobal! tag pro)
   (set! *gBoxTable* (cons (cons tag pro) *gBoxTable*)))
 
-(define  Box/Create      list)
+(define  Box/New         list)
 
 (define (Box/Width b)    (list-ref b 0))
 (define (Box/Height b)   (list-ref b 1))
@@ -13,21 +15,21 @@
 (define (Box/Drawable b) (list-ref b 3))
 
 (define (Box/Build expr)
-  (let* ((tag (AlgeExpr/Tag expr))
+  (let* ((tag (TagExpr/Tag expr))
          (proc (assoc tag *gBoxTable*)))
     (if (false? proc)
         (error "Proceduer not regist in global table for tag -- " tag)
         (proc expr))))
 
 (define (Box/BuildAtom expr)
-  (Box/Create (display-length expr) ; width
-              1                     ; height
-              0                     ; baseline
-              (lambda (x y target)
-                (XYBuffer/MVDrawString (object->string expr)
-                                       x
-                                       y
-                                       target))))
+  (Box/New (display-length expr) ; width
+           1                     ; height
+           0                     ; baseline
+           (lambda (x y target)
+             (XYBuffer/MVDrawString (object->string expr)
+                                    x
+                                    y
+                                    target))))
 
 (define (Box/BuildAdd expr)
   (let* ((sub1 (Box/Build (AddExpr/LHS s)))
@@ -37,15 +39,15 @@
          (width (+ 3 sub1/w sub2/w))
          (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
          (baseline (max sub1/b sub2/b)))
-    (Box/Create width
-                height
-                baseline
-                (lambda (x y target)
-                  (let ((sub1/draw-y (+ y (- baseline sub1/b)))
-                        (sub2/draw-y (+ y (- baseline sub2/b))))
-                    (XYBuffer/MVDrawChar #\+ (+ 1 x sub1/w) (+ y baseline) target)
-                    ((Box/Drawable sub1) x              sub1/draw-y target)
-                    ((Box/Drawable sub2) (+ 3 x sub1/w) sub2/draw-y target))))))
+    (Box/New width
+             height
+             baseline
+             (lambda (x y target)
+               (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                     (sub2/draw-y (+ y (- baseline sub2/b))))
+                 (XYBuffer/MVDrawChar #\+ (+ 1 x sub1/w) (+ y baseline) target)
+                 ((Box/Drawable sub1) x              sub1/draw-y target)
+                 ((Box/Drawable sub2) (+ 3 x sub1/w) sub2/draw-y target))))))
 
 (define (Box/BuildSub expr)
   (let* ((sub1 (Box/Build (SubExpr/LHS expr)))
@@ -55,15 +57,15 @@
          (width (+ 3 sub1/w sub2/w))
          (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
          (baseline (max sub1/b sub2/b)))
-    (Box/Create width
-                height
-                baseline
-                (lambda (x y target)
-                  (let ((sub1/draw-y (+ y (- baseline sub1/b)))
-                        (sub2/draw-y (+ y (- baseline sub2/b))))
-                    (XYBuffer/MVDrawChar #\- (+ 1 x sub1/w) (+ y baseline) target)
-                    ((Box/Drawable sub1) x              sub1/draw-y target)
-                    ((Box/Drawable sub2) (+ 3 x sub1/w) sub2/draw-y target))))))
+    (Box/New width
+             height
+             baseline
+             (lambda (x y target)
+               (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                     (sub2/draw-y (+ y (- baseline sub2/b))))
+                 (XYBuffer/MVDrawChar #\- (+ 1 x sub1/w) (+ y baseline) target)
+                 ((Box/Drawable sub1) x              sub1/draw-y target)
+                 ((Box/Drawable sub2) (+ 3 x sub1/w) sub2/draw-y target))))))
 
 (define (Box/BuildMul expr)
   (let* ((sub1 (Box/Build (SubExpr/LHS expr)))
@@ -73,15 +75,15 @@
          (width (+ 3 sub1/w sub2/w))
          (height (+ (max sub1/b sub2/b) (max (- sub1/h sub1/b) (- sub2/h sub2/b))))
          (baseline (max sub1/b sub2/b)))
-    (Box/Create width
-                height
-                baseline
-                (lambda (x y target)
-                  (let ((sub1/draw-y (+ y (- baseline sub1/b)))
-                        (sub2/draw-y (+ y (- baseline sub2/b))))
-                    (XYBuffer/MVDrawChar #\* (+ 1 x sub1/w) (+ y baseline) target)
-                    ((box/drawable sub1) x              sub1/draw-y target)
-                    ((box/drawable sub2) (+ 3 x sub1/w) sub2/draw-y target))))))
+    (Box/New width
+             height
+             baseline
+             (lambda (x y target)
+               (let ((sub1/draw-y (+ y (- baseline sub1/b)))
+                     (sub2/draw-y (+ y (- baseline sub2/b))))
+                 (XYBuffer/MVDrawChar #\* (+ 1 x sub1/w) (+ y baseline) target)
+                 ((box/drawable sub1) x              sub1/draw-y target)
+                 ((box/drawable sub2) (+ 3 x sub1/w) sub2/draw-y target))))))
 
 (define (Box/BuildDiv expr)
   (let* ((sub1 (Box/Build (DivExpr/LHS expr)));(AlgeExpr/TryUnparen (DivExpr/LHS s))))
@@ -91,15 +93,15 @@
          (width  (+ 2 (max sub1/w sub2/w)))
          (height (+ 1 sub1/h sub2/h))
          (baseline (Box/Height sub1)))
-    (Box/Create width
-                height
-                baseline
-                (lambda (x y target)
-                  (let ((sub1/draw-x (+ x (quotient (- width sub1/w) 2)))
-                        (sub2/draw-x (+ x (quotient (- width sub2/w) 2))))
-                    (XYBuffer/MVDrawString (make-string width #\-) x (+ y baseline) target)
-                    ((Box/Drawable sub1) sub1/draw-x y target)
-                    ((Box/Drawable sub2) sub2/draw-x (+ 1 y baseline) target))))))
+    (Box/New width
+             height
+             baseline
+             (lambda (x y target)
+               (let ((sub1/draw-x (+ x (quotient (- width sub1/w) 2)))
+                     (sub2/draw-x (+ x (quotient (- width sub2/w) 2))))
+                 (XYBuffer/MVDrawString (make-string width #\-) x (+ y baseline) target)
+                 ((Box/Drawable sub1) sub1/draw-x y target)
+                 ((Box/Drawable sub2) sub2/draw-x (+ 1 y baseline) target))))))
 
 ;(define (Box/BuildRoot expr)
 ;  (let* ((inner (Box/Build (RootExpr/Power expr)))
@@ -108,7 +110,7 @@
 ;    (let* ((width (+ 2 inner/w inner/h))
 ;           (height (+ 1 inner/h))
 ;           (baseline (quotient height 2)))
-;      (Box/Create width
+;      (Box/New width
 ;                  height
 ;                  baseline
 ;                  (lambda (x y target)
